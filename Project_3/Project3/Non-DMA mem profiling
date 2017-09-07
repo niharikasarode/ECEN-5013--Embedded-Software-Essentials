@@ -1,0 +1,146 @@
+/*
+ * Copyright (c) 2015, Freescale Semiconductor, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this list
+ *   of conditions and the following disclaimer.
+ *
+ * o Redistributions in binary form must reproduce the above copyright notice, this
+ *   list of conditions and the following disclaimer in the documentation and/or
+ *   other materials provided with the distribution.
+ *
+ * o Neither the name of Freescale Semiconductor, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived from this
+ *   software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "MKL25Z4.h"
+ #include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+
+
+
+uint32_t string1[3];
+uint32_t string2[3];
+uint32_t *str1, *str2;
+int time,count;
+
+static int i = 0;
+
+int32_t my_memmove(uint32_t *m1, uint32_t *m2, uint32_t u);
+void my_memzero(uint8_t *src,int length);
+void UART0_initw(void);
+void TIMER0_init();
+
+
+int32_t my_memmove(uint32_t *m1, uint32_t *m2, uint32_t u)
+{
+				int i;
+
+			if (( m1 + u - 1) > m2)
+			{
+				for(i=u; i>=0 ;i--)
+				{
+				*(m2+i)=*(m1+i);
+				}
+			}
+
+			else if (( m2 + u - 1) > m1)
+			    {
+
+				for(i=0; i<u ;i++)
+				{
+				*(m2+i)=*(m1+i);
+				}
+
+				}
+
+}
+
+
+my_memzero(uint32_t *src,int length)
+{
+
+int i;
+for(i=0;i<length;i++)
+{
+*(src+i)='\0';
+}
+
+}
+
+
+
+
+void send (char c)
+{
+	while(!(UART0->S1 & 0x80)) { }
+		    UART0->D = c;                /* send a char */
+
+
+}
+
+
+void TPM0_IRQHandler(void){
+	TPM0->SC|=0x80;				//clear TOF
+	count+=1;
+}
+
+void TIMER0_init(){
+		__disable_irq();
+
+		SIM->SOPT2|=0x01000000;		//use mcgfllclk
+		SIM->SCGC6|=0x01000000;		//enable clock to tpm0
+		TPM0->SC=0;					//disable timer
+		TPM0->SC=0x06; 				//prescaler to 64
+		TPM0->MOD=0xFFFF;
+		TPM0->SC|=0x80;				//clear TOF
+		TPM0->SC|=0x40;				//enable timeout interrupt
+		NVIC->ISER[0]|=0x00020000;
+		__enable_irq();
+}
+
+
+
+int main(void)
+{
+
+	TIMER0_init();
+
+    str1 = string1;
+    str2 = string2;
+
+    for (int k = 0; k<3; k++)
+    {
+    	string1[k] = k;
+    }
+    int m = 3;
+
+    TPM0->SC|=0x08;
+    //my_memzero(str1, m);
+
+    my_memmove(str1, str2, m);
+    TPM0->SC=0;					//disable timer
+    time=3*((count*65536)+TPM0->CNT);
+
+
+    return 0;
+}
+////////////////////////////////////////////////////////////////////////////////
+// EOF
+////////////////////////////////////////////////////////////////////////////////
